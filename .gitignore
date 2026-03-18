@@ -1,0 +1,66 @@
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+env/
+.venv/
+datascibench/
+conda-meta/
+
+# =========================
+# DataSciBench Outputs
+# =========================
+
+# Model outputs
+data/*/*_outputs.jsonl
+data/*/*_tmc_results.jsonl
+
+# Task-specific generated folders
+data/*/mistral_*
+data/*/gpt_*
+data/*/*_time.txt
+
+# Logs
+logs/
+*.log
+
+# Metric intermediate files
+metric/*/tmp*
+metric/*/__pycache__/
+
+# =========================
+# Jupyter
+# =========================
+.ipynb_checkpoints/
+
+# =========================
+# OS Files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE
+# =========================
+.vscode/
+.idea/
+
+# =========================
+# Matplotlib cache
+# =========================
+.matplotlib/
+
+# =========================
+# Ollama (optional)
+# =========================
+ollama.log
