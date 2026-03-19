@@ -41,6 +41,20 @@ def generate_code(prompt):
     return cleaned
 
 
+# Load prompt from DataSciBench folder
+def load_prompt(task_folder):
+    prompt_path = os.path.join("data", task_folder, "prompt.json")
+
+    if not os.path.exists(prompt_path):
+        raise FileNotFoundError(f"prompt.json not found in {task_folder}")
+
+    with open(prompt_path, "r") as f:
+        data = json.load(f)
+
+    # DataSciBench prompt format
+    return data["prompt"]
+
+
 # Save to DataSciBench format
 def save_output(task_folder, model_id, code):
     output_path = os.path.join(
@@ -68,32 +82,23 @@ def save_output(task_folder, model_id, code):
 # Main
 if __name__ == "__main__":
 
-    task_prompt = """
-        You are solving a DataSciBench task.
+    # Automatically detect all bcb task folders
+    all_tasks = [
+        folder for folder in os.listdir("data")
+        if folder.startswith("bcb") and os.path.isdir(os.path.join("data", folder))
+    ]
 
-        Return ONLY valid Python code.
-        Do NOT include markdown.
-        Do NOT include explanation.
-        Do NOT execute the function.
+    print(f"Found {len(all_tasks)} tasks")
 
-        The code MUST:
-        - Import pandas as pd
-        - Import matplotlib.pyplot as plt
-        - Import seaborn as sns
-        - Define: def task_func(list_of_pairs):
-        - Create a DataFrame with columns ['Category', 'Value']
-        - Create a seaborn barplot of Category vs Value
-        - Set the title EXACTLY to 'Category vs Value'
-        - Return (df, ax)
-        """
+    for task_folder in sorted(all_tasks):
 
-    print("Generating code from Ollama...\n")
-    generated_code = generate_code(task_prompt)
+        print(f"\n==============================")
+        print(f"Running task: {task_folder}")
+        print(f"==============================")
 
-    print("Generated Code:\n")
-    print(generated_code)
-
-    save_output(TASK_FOLDER, MODEL_ID, generated_code)
-
-    print("\nNow run evaluation with:")
-    print(f"python -m experiments.evaluate_tmc --model_id {MODEL_ID} --task_id {TASK_FOLDER}")
+        try:
+            task_prompt = load_prompt(task_folder)
+            generated_code = generate_code(task_prompt)
+            save_output(task_folder, MODEL_ID, generated_code)
+        except Exception as e:
+            print(f"Failed on {task_folder}: {e}")
