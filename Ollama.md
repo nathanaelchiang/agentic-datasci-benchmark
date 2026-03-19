@@ -63,7 +63,7 @@ This will:
 - Compute CR and TMC metrics
 - Save results to `data/<task_id>/mistral_tmc_results.jsonl`
 
-## ⚠️ Important: Headless Plotting
+## Important: Headless Plotting
 
 Evaluation requires matplotlib to use a non-GUI backend. `evaluate_tmc.py` has been patched with:
 

@@ -4,8 +4,8 @@ import os
 
 # Config
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_ID = "mistral"      
-TASK_FOLDER = "bcb9"       
+MODEL_ID = "mistral"
+TASK_FOLDER = "bcb9"
 
 
 # Generate code from Ollama
@@ -34,9 +34,9 @@ def generate_code(prompt):
 
     cleaned = "\n".join(lines).strip()
 
-    # Ensure we start at first import
-    if "import pandas" in cleaned:
-        cleaned = cleaned[cleaned.index("import pandas"):]
+    # Ensure we start at first import if present
+    if "import" in cleaned:
+        cleaned = cleaned[cleaned.index("import"):]
 
     return cleaned
 
@@ -51,7 +51,6 @@ def load_prompt(task_folder):
     with open(prompt_path, "r") as f:
         data = json.load(f)
 
-    # DataSciBench prompt format
     return data["prompt"]
 
 
@@ -82,23 +81,11 @@ def save_output(task_folder, model_id, code):
 # Main
 if __name__ == "__main__":
 
-    # Automatically detect all bcb task folders
-    all_tasks = [
-        folder for folder in os.listdir("data")
-        if folder.startswith("bcb") and os.path.isdir(os.path.join("data", folder))
-    ]
+    print(f"Running task: {TASK_FOLDER}")
 
-    print(f"Found {len(all_tasks)} tasks")
-
-    for task_folder in sorted(all_tasks):
-
-        print(f"\n==============================")
-        print(f"Running task: {task_folder}")
-        print(f"==============================")
-
-        try:
-            task_prompt = load_prompt(task_folder)
-            generated_code = generate_code(task_prompt)
-            save_output(task_folder, MODEL_ID, generated_code)
-        except Exception as e:
-            print(f"Failed on {task_folder}: {e}")
+    try:
+        task_prompt = load_prompt(TASK_FOLDER)
+        generated_code = generate_code(task_prompt)
+        save_output(TASK_FOLDER, MODEL_ID, generated_code)
+    except Exception as e:
+        print(f"Failed on {TASK_FOLDER}: {e}")

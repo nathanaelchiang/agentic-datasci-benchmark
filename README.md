@@ -1,167 +1,175 @@
-# DataSciBench: An LLM Agent Benchmark for Data Science
+# DataSciBench Agentic Data Analysis Pipeline
 
-<p align="center">
-📃 <a href="https://arxiv.org/abs/2502.13897" target="_blank">[DataSciBench]</a> 
-<a href="https://github.com/THUDM/DataSciBench" target="_blank">[GitHub]</a>
-<a href="https://huggingface.co/datasets/zd21/DataSciBench/tree/main" target="_blank">[Evaluation Data]</a>
-<a href="https://datascibench.github.io/" target="_blank">[Website]</a> <br> <br>
-</p>
+## Overview
 
-## Introduction
+This project evaluates a language model (Mistral via Ollama) on
+DataSciBench tasks.
 
-### Install MetaGPT
+Each task folder follows this structure:
 
-```bash
-cd MetaGPT
-pip install .
-```
+    data/
+      bcbXX/
+        prompt.json
+        mistral_outputs.jsonl
+        mistral_tmc_results.jsonl
 
-### Data
+These three files represent:
 
-All collected prompts have been processed through `notebooks/preprocess_prompt.ipynb` and save into `data/{task_id}/`.
-   
+1.  The task specification
+2.  The model's generated solution
+3.  The benchmark evaluation results
 
-### Prepare Env
 
-Run
-```bash
-pip install -r requirements.txt
-```
-To run dl experiments, you may also need to log in to wandb.
+------------------------------------------------------------------------
 
-### Experimental Setting
+# 1. prompt.json - The Task Specification
 
-Config model in `~/.metagpt/config2.yaml/`
+**Created by:** DataSciBench
 
-### Running
+### What it contains:
 
-Run all experiments as follows
-```bash
-python -c "import sys; sys.path.append('/path/to/DataSciBench'); from experiments import run_examples"
+-   The natural language data science prompt
+-   Required input datasets
+-   Ground-truth expectations
+-   Evaluation metadata
 
-python -m experiments.run_examples
-```
-Run a particular experiment, as follows
-```bash
-python -m experiments.run_examples --task_id dl_0
+### Conceptually:
 
-python -m experiments.run_examples --data_type dl --config test_config_dl.yaml
-```
-Specifies to run a prompt of some kind, for example, to run a prompt with no external data dependencies
-```bash
-python -m experiments.run_examples --data_source_type 1
-```
+    Prompt → What the model must solve
 
-### Check the generation process
-```bash
-python -m evaluations.check_result --model_id all
-```
+Example (simplified):
 
-### Output Sample
-
-```json
+``` json
 {
-    "time_cost": 146.17888736724854,
-    "error_list": [
-        1,
-        2,
-        2,
-        2,
-        2,
-        2,
-        0
-    ],
-    "cost": [
-        37966,
-        4465,
-        0.04689600000000001,
-        0
-    ],
-    "plan": [
-        {
-            "task_id": "1",
-            "dependent_task_ids": [],
-            "instruction": "Fine-tune the sentiment classification model using the EleutherAI/twitter-sentiment dataset",
-            "task_type": "predictive modeling",
-            "code": "tokenizer = GPT2Tokenizer.from_pretrained('../gpt2-small/')",
-            "result": "",
-            "is_success": true,
-            "is_finished": true
-        },
-        {
-            "task_id": "2",
-            "dependent_task_ids": [
-                "1"
-            ],
-            "instruction": "Verify the existence of the 'evaluation_data.parquet' file at the specified location '../' and update the file path if necessary",
-            "task_type": "data exploration",
-            "code": "import pandas as pd\n\n# Verify the existence of the evaluation data file\ntry:\n    evaluation_data = pd.read_parquet('../evaluation_data.parquet')\n\n    # Display basic statistical indicators\n    print(evaluation_data.describe())\n\n    # Visualize data distributions\n    import matplotlib.pyplot as plt\n    import seaborn as sns\n\n    # Histogram\n    plt.figure(figsize=(10, 6))\n    sns.histplot(evaluation_data['sentiment'], kde=False)\n    plt.title('Sentiment Distribution')\n    plt.xlabel('Sentiment')\n    plt.ylabel('Count')\n    plt.show()\n\n    # Box plot\n    plt.figure(figsize=(10, 6))\n    sns.boxplot(x=evaluation_data['sentiment'])\n    plt.title('Sentiment Distribution')\n    plt.xlabel('Sentiment')\n    plt.show()\n\n    # Correlation matrix\n    correlation_matrix = evaluation_data.corr()\n    plt.figure(figsize=(10, 6))\n    sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm', fmt='.2f')\n    plt.title('Correlation Matrix')\n    plt.show()\nexcept FileNotFoundError as e:\n    print('File not found:', e)",
-            "result": "File not found: [Errno 2] No such file or directory: '../evaluation_data.parquet'\n",
-            "is_success": true,
-            "is_finished": true
-        },
-        {
-            "task_id": "3",
-            "dependent_task_ids": [
-                "2"
-            ],
-            "instruction": "Generate a comprehensive report on the model's performance in PDF format",
-            "task_type": "other",
-            "code": "from reportlab.lib import colors\nfrom reportlab.lib.pagesizes import letter\nfrom reportlab.platypus import SimpleDocTemplate, Table, TableStyle\n\n# Sample data for demonstration\ndata = [['Metric', 'Value'],\n        ['Accuracy', '0.85'],\n        ['Precision', '0.78'],\n        ['Recall', '0.92'],\n        ['F1 Score', '0.84']]\n\n# Create PDF\npdf_filename = './performance_report.pdf'\npdf = SimpleDocTemplate(pdf_filename, pagesize=letter)\ntable = Table(data)\n\n# Add style to the table\nstyle = TableStyle([('BACKGROUND', (0, 0), (-1, 0), colors.grey),\n                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),\n                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),\n                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),\n                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),\n                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),\n                    ('GRID', (0, 0), (-1, -1), 1, colors.black)])\n\ntable.setStyle(style)\n\n# Build PDF\npdf.build([table])\n\nprint(f\"Performance report generated at: {pdf_filename}\")\n",
-            "result": "Performance report generated at: ./performance_report.pdf\n",
-            "is_success": true,
-            "is_finished": true
-        }
-    ]
+  "prompt": "Load the CSV file, clean missing values, compute mean of column A..."
 }
 ```
 
-### Evaluation
+This file defines the problem.
 
-#### Evaluate functions of BigCodeBench 
-```bash
-python -m experiments.evaluate_tmc --model_id glm-4.5-flash
+------------------------------------------------------------------------
+
+# 2. mistral_outputs.jsonl - Model-Generated Code
+
+**Created by:** Agent Script
+
+**This is the model's answer.**
+
+### What it contains:
+
+``` json
+{
+  "plan": [
+    {
+      "code": "import pandas as pd\n..."
+    }
+  ],
+  "output_dir": "bcb9",
+  "time_cost": 0,
+  "error_list": [],
+  "cost": 0
+}
 ```
 
-#### Evaluate other tasks
+### Conceptually:
 
-##### Set ground truth
+    LLM(prompt) → Python code → saved here
 
-Download ground truth from https://huggingface.co/datasets/zd21/DataSciBench/tree/main and move it to data/task_id/gt
+This file contains: - The generated `task_func` - The full solution
+code - What will be executed by the evaluator
 
-##### Run evaluation
-```bash
-python -m experiments.evaluate
+It represents the independent variable in your experiment (model
+behavior).
 
-python -m experiments.evaluate --task_id all --model_id glm-4.5-flash
+This file is what the evaluation runs on. 
+
+------------------------------------------------------------------------
+
+# 3. mistral_tmc_results.jsonl - Evaluation Metrics
+
+**Created by:** `experiments.evaluate_tmc`\
+**Produced AFTER evaluation runs.**
+
+### What it contains:
+
+-   Completion Rate (CR)
+-   Success Rate (SR)
+-   TMC score
+-   Subtask metric breakdowns
+
+Example (simplified):
+
+``` json
+{
+  "completion_rate": 1.0,
+  "success_rate": 0.8,
+  "tmc_score": 0.85
+}
 ```
 
-### Calculate metric
+### Conceptually:
 
-#### Calculate metrics for BigCodeBench 
-```bash
-python -m evaluation_results.calculate_final_metric
-```
-#### 
+    Execute mistral_outputs.jsonl
+    ↓
+    Run ground-truth validation
+    ↓
+    Compute CR / SR / TMC
+    ↓
+    Save results here
 
+This file represents the dependent variable in your experiment
+(performance metrics).
 
-### Others
+------------------------------------------------------------------------
 
-#### Modification of Data Interpreter (deprecated)
+# Full Pipeline
 
-See `SciDataInterpreter.update_results_for_eval` at `role/sci_data_interpreter`. We can get the plans with codes and results from each step; the costs for each step per plan; and the number of errors. 
+    prompt.json
+        ↓
+    LLM generates code
+        ↓
+    mistral_outputs.jsonl
+        ↓
+    Evaluator executes code
+        ↓
+    mistral_tmc_results.jsonl
 
-See `SciDataInterpreter.get_CR` at `role/sci_data_interpreter`. We can get the Completion Rate for this question that just ran. (Ground Truth not incorporated, so max at 0.5)
+------------------------------------------------------------------------
 
-## **Citation**
+# Metric Definitions
 
-If you find our work helpful, please kindly cite our paper:
+### Completion Rate (CR)
 
-```
-@article{zhang2025datascibench,
-        title={DataSciBench: An LLM Agent Benchmark for Data Science},
-        author={Zhang, Dan and Zhoubian, Sining and Cai, Min and Li, Fengzu and Yang, Lekang and Wang, Wei and Dong, Tianjiao and Hu, Ziniu and Tang, Jie and Yue, Yisong},
-        journal={arXiv preprint arXiv:2502.13897},
-        year={2025}
-        }
-```
+Did the code execute without crashing? - Syntax/runtime errors → CR =
+0 - Wrong logic but no crash → CR = 1
+
+### Success Rate (SR)
+
+Did the output pass ground-truth checks? - Correct format - Correct
+columns - Correct values - Correct saved files
+
+### TMC Score
+
+Weighted aggregate of: - CR - SR - Subtask evaluation functions
+
+TMC is the final benchmark score.
+
+------------------------------------------------------------------------
+
+# Experimental Setup
+
+We run two conditions:
+
+## Baseline
+
+Single-pass code generation
+
+Files: - `mistral_outputs.jsonl` - `mistral_tmc_results.jsonl`
+
+## Retry Agent 
+
+Iterative correction with self-evaluation
+
+Files: - `mistral_retry_outputs.jsonl` -
+`mistral_retry_tmc_results.jsonl`
+              
