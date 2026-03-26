@@ -22,13 +22,13 @@ conda-meta/
 # =========================
 
 # Model outputs
-# data/*/*_outputs.jsonl
-# data/*/*_tmc_results.jsonl
+data/*/*_outputs.jsonl
+data/*/*_tmc_results.jsonl
 
-# Task-specific generated folders
-# data/*/mistral_*
-# data/*/gpt_*
-# data/*/*_time.txt
+Task-specific generated folders
+data/*/mistral_*
+data/*/gpt_*
+data/*/*_time.txt
 
 # Logs
 logs/

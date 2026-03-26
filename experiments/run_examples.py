@@ -130,6 +130,9 @@ if __name__ == "__main__":
 
             # save misc. model statistics
             model_name = get_model_name(args.config)
+            
+            model_name = model_name.replace(":", "_").replace(".", "_")
+                        
             if not folder.startswith('bcb'):
                 model_name = model_name.split("/")[-1]
             output_dict_path = os.path.join(run_dir, f"{model_name}_outputs.jsonl")

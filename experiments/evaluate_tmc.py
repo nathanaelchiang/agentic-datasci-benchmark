@@ -7,10 +7,7 @@ from utils.used_libs import *
 from utils.cr_for_bcb import *
 import shutil
 import concurrent.futures
-import matplotlib
-import multiprocessing
 
-matplotlib.use("Agg")
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="For TMC Evaluation")
@@ -38,18 +35,6 @@ def extract_answer_func(plan: list) -> str:
             break
     return ans
 
-def run_code(cur_answer, inputs_code, test_code, result_dict):
-    try:
-        local_vars = {"__builtins__": __builtins__}
-
-        exec(inputs_code, local_vars)
-        exec(cur_answer, local_vars)
-        exec(test_code, local_vars)
-
-        result_dict['cur_completion_output'] = local_vars.get('cur_completion_output')
-
-    except Exception as e:
-        result_dict['error'] = str(e)
 
 def main(all_args):
     output_dir = 'data'
@@ -94,30 +79,9 @@ def main(all_args):
                             raise Exception('Multiple task_func definitions are not allowed!')
                         exec(cur_answer, locals())
                         print('Answer function defined...')
-                    
-                        print('Testing answer function with timeout (multiprocessing)...')
-
-                        manager = multiprocessing.Manager()
-                        result_dict = manager.dict()
-
-                        p = multiprocessing.Process(
-                            target=run_code,
-                            args=(cur_answer, inputs, test_comp_func, result_dict)
-                        )
-
-                        p.start()
-                        p.join(timeout=5)
-
-                        if p.is_alive():
-                            p.terminate()
-                            p.join()
-                            raise Exception("Execution timed out (possible infinite loop)")
-
-                        if 'error' in result_dict:
-                            raise Exception(result_dict['error'])
-
-                        temp_dict['cur_completion_output'] = result_dict.get('cur_completion_output')
-
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            print('Testing answer function with ThreadPoolExecutor...')
+                            exec(test_comp_func, locals(), temp_dict)
                         print('Answer function tested...')
                         exec(gt_func, locals())
                         print('Ground truth function defined...')
@@ -207,30 +171,9 @@ def main(all_args):
                             raise Exception('Multiple task_func definitions are not allowed!')
                         exec(cur_answer, locals())
                         print('Answer function defined...')
-                        
-                        print('Testing answer function with timeout (multiprocessing)...')
-
-                        manager = multiprocessing.Manager()
-                        result_dict = manager.dict()
-
-                        p = multiprocessing.Process(
-                            target=run_code,
-                            args=(cur_answer, inputs, test_comp_func, result_dict)
-                        )
-
-                        p.start()
-                        p.join(timeout=5)
-
-                        if p.is_alive():
-                            p.terminate()
-                            p.join()
-                            raise Exception("Execution timed out (possible infinite loop)")
-
-                        if 'error' in result_dict:
-                            raise Exception(result_dict['error'])
-
-                        temp_dict['cur_completion_output'] = result_dict.get('cur_completion_output')
-
+                        with concurrent.futures.ThreadPoolExecutor() as executor:
+                            print('Testing answer function with ThreadPoolExecutor...')
+                            exec(test_comp_func, locals(), temp_dict)
                         print('Answer function tested...')
                         exec(gt_func, locals())
                         print('Ground truth function defined...')

@@ -1,9 +1,18 @@
 import os
 import subprocess
 import json
+from datetime import datetime
 
-MODEL_ID = "mistral"
-MAX_EVALS = 25
+import sys
+
+MODEL_ID = sys.argv[1]
+# MODEL_ID = "qwen2.5-7b"
+MAX_EVALS = 100
+
+STRATEGY = "baseline"
+TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
+RUN_ID = f"{STRATEGY}_{MODEL_ID}_{TIMESTAMP}"
+# MODEL_ID = "mistral"
 
 # Load curated task subset
 with open("selected_tasks.json", "r") as f:

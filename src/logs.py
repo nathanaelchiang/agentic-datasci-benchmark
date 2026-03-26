@@ -16,6 +16,8 @@ def get_model_name(config_name="config2.yaml"):
 
     # Get the model name from the config
     model_name = config["llm"]["model"]
+    
+    model_name = model_name.replace(":", "_").replace(".", "_")
 
     return model_name
 
