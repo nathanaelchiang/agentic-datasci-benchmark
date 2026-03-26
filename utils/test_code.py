@@ -1,12 +1,17 @@
+# test_comp_func = '''
+# import concurrent
+# future = executor.submit(task_func, *args)
+# print('Function submitted to executor...\\n')
+# try:
+#     cur_completion_output = future.result(timeout=120)
+# except concurrent.futures.TimeoutError:
+#     executor.shutdown(wait=False)
+#     raise TimeoutError('Function did not complete within 120s!\\n')
+# if not isinstance(cur_completion_output, tuple):
+#     cur_completion_output = (cur_completion_output,)
+# '''
 test_comp_func = '''
-import concurrent
-future = executor.submit(task_func, *args)
-print('Function submitted to executor...\\n')
-try:
-    cur_completion_output = future.result(timeout=120)
-except concurrent.futures.TimeoutError:
-    executor.shutdown(wait=False)
-    raise TimeoutError('Function did not complete within 120s!\\n')
+cur_completion_output = task_func(*args)
 if not isinstance(cur_completion_output, tuple):
     cur_completion_output = (cur_completion_output,)
 '''
