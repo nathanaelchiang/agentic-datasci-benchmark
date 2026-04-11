@@ -1,6 +1,6 @@
 """
 Multi-agent Planner+Executor+Reflector pipeline
-Author: Jicheng Li
+Jicheng Li
 """
 
 import json
@@ -8,21 +8,23 @@ import os
 import re
 import subprocess
 import sys
+import time
 import requests
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-
-MODEL_PLANNER   = "qwen2.5-coder:3b"
-MODEL_EXECUTOR  = "qwen2.5-coder:3b"
-MODEL_REFLECTOR = "qwen2.5-coder:3b"
-OLLAMA_URL      = "http://localhost:11434/api/chat"
+model_str = "qwen2.5-coder:3b"
+MODEL_PLANNER   = model_str
+MODEL_EXECUTOR  = model_str
+MODEL_REFLECTOR = model_str
+URL             = "http://localhost:11434"
+OLLAMA_URL      = f"{URL}/api/chat"
 DATASCIBENCH_DIR = "."
 
 INNER_LIMIT = 3   # executor retries per plan
 OUTER_LIMIT = 2   # re-plan attempts on total inner failure
-
+DECODE_ERROR = {"count": 0}
 # ---------------------------------------------------------------------------
 # Low-level helpers
 # ---------------------------------------------------------------------------
@@ -38,11 +40,19 @@ def ollama_call(system: str, user: str, model: str = "", json_mode: bool = False
     }
     if json_mode:
         payload["format"] = "json"   # only set when needed — None breaks Ollama
-
-    resp = requests.post(OLLAMA_URL, json=payload)
-    print("=" * 60)
-    print("Response")
-    print(resp.json())
+    resp = None
+    while True:
+        resp = requests.post(OLLAMA_URL, json=payload)
+        try:
+            resp.json()
+        except json.JSONDecodeError as e:
+            print(f"Decode Error {e}")
+            DECODE_ERROR["count"] += 1
+            continue
+        print("=" * 60)
+        print("Response")
+        print(resp.json())
+        break
     return resp.json()["message"]["content"].strip()
 
 
@@ -146,9 +156,21 @@ Output schema (follow exactly, no extra fields):
 {PLAN_SCHEMA}
 
 Task: {task_prompt}{history_block}"""
-
-    raw = ollama_call(PLANNER_SYSTEM, user_msg, model=MODEL_PLANNER, json_mode=True)
-    return json.loads(extract_json(raw))
+    res = None
+    while True:
+        try:
+            raw = ollama_call(PLANNER_SYSTEM, user_msg, model=MODEL_PLANNER, json_mode=True)
+            res = json.loads(extract_json(raw))
+            break
+        except ValueError as ve:
+            print(f"Value Error Encountered: {ve}")
+            time.sleep(2)
+            continue
+        except TypeError as te:
+            print(f"TypeError encountered {te}")
+            time.sleep(2)
+            continue
+    return res 
 
 
 # ---------------------------------------------------------------------------
@@ -240,7 +262,8 @@ Code:
 # ---------------------------------------------------------------------------
 
 def tfc_eval(code: str, task_folder: str, model_id: str = "", retry: bool = True) -> tuple[bool, str]:
-    path = os.path.join("data", task_folder, f"PEL-{model_id}_outputs.jsonl")
+    prefix = "PEL" if retry else "PE"
+    path = os.path.join("data", task_folder, f"{prefix}-{model_id}_outputs.jsonl")
     record = {
         "plan": [{"code": code}],
         "output_dir": task_folder,
@@ -251,12 +274,12 @@ def tfc_eval(code: str, task_folder: str, model_id: str = "", retry: bool = True
     with open(path, "w", encoding="utf-8") as f:
         f.write(json.dumps(record))
 
-    if not retry:
-        return True, ""
+    #if not retry:
+    #    return True, ""
 
     res = subprocess.run(
         ["python", "-m", "experiments.evaluate_tmc",
-         "--task_id", task_folder, "--model_id", f"PE-{model_id}"],
+         "--task_id", task_folder, "--model_id", f"{prefix}-{model_id}"],
         cwd=DATASCIBENCH_DIR,
         capture_output=True,
         text=True,
@@ -274,8 +297,16 @@ def tfc_eval(code: str, task_folder: str, model_id: str = "", retry: bool = True
         m = re.search(r"<Error type>\s*(.*?)\s*-{10,}", section, re.DOTALL)
         error_msg = m.group(1).strip() if m else section.strip()
         return False, error_msg
-
-    if re.search(r"<metric_output>\s*1\.0", section):
+    path = os.path.join("./data", task_folder, f"{prefix}-{model_id}_tmc_results.jsonl")
+    obj = None
+    with open(path, "r", encoding="utf-8") as f:
+        content = "\n".join(f.readlines())
+        try:
+            obj = json.loads(content)
+        except json.JSONDecodeError as je:
+            print(f"Error Decoding JSON: {je}")
+            return False, "Error Decoding"
+    if obj["cr"] == 1:
         return True, ""
 
     return False, f"No passing metric found for {task_folder}"
@@ -307,10 +338,11 @@ def run_pipeline(task_prompt: str, task_folder: str, retry: bool = True) -> dict
 
     for outer in range(OUTER_LIMIT if retry else 1):
         print(f"\n{'='*60}")
-        print(f"OUTER LOOP {outer + 1}/{OUTER_LIMIT}  —  Planning")
+        print(f"OUTER LOOP {outer + 1}/{OUTER_LIMIT if retry else 1}  —  Planning {task_folder}")
         print(f"{'='*60}")
 
         plan = run_planner(task_prompt, failure_history or None)
+        time.sleep(2)
         print(json.dumps(plan, indent=2))
 
         prev_code  = None
@@ -318,7 +350,7 @@ def run_pipeline(task_prompt: str, task_folder: str, retry: bool = True) -> dict
         inner_failure_summary = []
 
         for inner in range(INNER_LIMIT if retry else 1):
-            print(f"\n--- Executor attempt {inner + 1}/{INNER_LIMIT} ---")
+            print(f"\n--- Executor attempt {inner + 1}/{INNER_LIMIT if retry else 1}: {task_folder}  ---")
 
             code = run_executor(
                 plan,
@@ -327,20 +359,22 @@ def run_pipeline(task_prompt: str, task_folder: str, retry: bool = True) -> dict
                 reflection=reflection,
                 return_spec=return_spec,
             )
+            time.sleep(2)
             print(f"[Code]\n{code}\n")
 
             passed, error = tfc_eval(code, task_folder, model_id=MODEL_EXECUTOR, retry=retry)
 
             if passed:
                 print(f"✓ Passed on outer={outer+1}, inner={inner+1}")
-                return {"plan": plan, "code": code}
+                return {"plan": plan, "code": code, "outcome": "passed"}
 
             print(f"✗ Failed: {error}")
             error_history.append(error)
             inner_failure_summary.append(error)
 
             if retry:
-                reflection = run_reflector(code, error, error_history[:-1])
+                reflection = run_reflector(code, error, error_history)
+                time.sleep(2)
                 print(f"[Reflection] {reflection}")
                 prev_code = code
 
@@ -350,7 +384,7 @@ def run_pipeline(task_prompt: str, task_folder: str, retry: bool = True) -> dict
         )
 
     print("✗ All attempts exhausted.")
-    return {"plan": plan, "code": code}
+    return {"plan": plan, "code": code, "outcome": "failed"}
 
 
 # ---------------------------------------------------------------------------
@@ -374,10 +408,23 @@ if __name__ == "__main__":
     RETRY_AGENT = len(sys.argv) == 1
     with open("./selected_tasks.json", "r", encoding="utf-8") as tf:
         task_list = json.load(tf)
-
-    for i, task in enumerate(task_list[:16]):
+    count_PF = {
+        "passed": 0,
+        "failed": 0,
+        "total": 0
+    }
+    st = time.time()
+    for i, task in enumerate(task_list):
         print(f"\n{'#'*60}")
         print(f"TASK {i+1}: {task}")
         print(f"{'#'*60}")
         prompt = load_prompt(task)
         result = run_pipeline(prompt, task, retry=RETRY_AGENT)
+        count_PF["total"] += 1
+        count_PF[result["outcome"]] += 1
+        iet = time.time()
+        print(f"Current Duration: {iet-st} seconds")
+    et = time.time()
+    print(DECODE_ERROR)
+    print(f"Total Duration: {et-st} seconds")
+    print(count_PF)
