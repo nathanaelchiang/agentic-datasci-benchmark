@@ -1,3 +1,5 @@
+langchain-ollama
+langgraph
 seaborn
 metagpt
 imbalanced-learn

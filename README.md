@@ -33,15 +33,7 @@ pip install -r requirements.txt
 
 Key dependencies include: `requests`, `pandas`, `numpy`, `scikit-learn`, `matplotlib`, `scipy`, `pyyaml`, `langchain-ollama`, and `langgraph`.
 
-### 3. Prepare benchmark data
-
-Clone the DataSciBench repository and copy the required folders into this project:
-
-```bash
-git clone https://github.com/THUDM/DataSciBench.git
-cp -r DataSciBench/data/ ./data/
-cp -r DataSciBench/metric/ ./metric/
-```
+### 3. Benchmark data
 
 Each task folder (`data/bcbXX/`) contains a `prompt.json` with the task description. Each metric folder (`metric/bcbXX/`) contains a `metric.yaml` with ground truth, input data, and TFC evaluation definitions.
 
@@ -126,6 +118,18 @@ python run_all_evals.py
 ```
 
 Edit `MODEL_ID` in the script to match the agent output you want to evaluate. Skips tasks that already have results.
+
+### Run evaluation across selected tasks (retry agent)
+
+```bash
+python run_all_evals_retry.py --model qwen2.5-coder:7b-instruct
+```
+
+Looks for existing retry output files (`<model_id>_retry_v3_outputs.jsonl`) in each task folder and runs TFC evaluation on them. Add `--selected` to restrict to `selected_tasks.json`.
+
+- Skips tasks where outputs are missing or results already exist
+- Caps at 200 evaluations by default (`MAX_EVALS`)
+- Results saved to `data/<task_id>/<model_id>_retry_v3_tmc_results.jsonl`
 
 ### View aggregate results
 

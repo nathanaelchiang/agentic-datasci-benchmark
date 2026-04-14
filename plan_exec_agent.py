@@ -3,6 +3,8 @@ Multi-agent Planner+Executor+Reflector pipeline
 Jicheng Li
 """
 
+from __future__ import annotations
+
 import json
 import os
 import re
@@ -14,7 +16,7 @@ import requests
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-model_str = "qwen2.5-coder:3b"
+model_str = "qwen2.5-coder:7b"  
 MODEL_PLANNER   = model_str
 MODEL_EXECUTOR  = model_str
 MODEL_REFLECTOR = model_str
@@ -44,16 +46,18 @@ def ollama_call(system: str, user: str, model: str = "", json_mode: bool = False
     while True:
         resp = requests.post(OLLAMA_URL, json=payload)
         try:
-            resp.json()
+            data = resp.json()
         except json.JSONDecodeError as e:
             print(f"Decode Error {e}")
             DECODE_ERROR["count"] += 1
             continue
         print("=" * 60)
         print("Response")
-        print(resp.json())
+        print(data)
+        if "error" in data:
+            raise RuntimeError(f"Ollama error: {data['error']}")
         break
-    return resp.json()["message"]["content"].strip()
+    return data["message"]["content"].strip()
 
 
 def extract_json(text: str) -> str:
