@@ -5,11 +5,11 @@ import os
 # Config
 OLLAMA_URL = "http://localhost:11434/api/generate"
 # MODEL_ID = "mistral"     
-# OLLAMA_MODEL = "qwen2.5:7b"   # for API
-# MODEL_ID = "qwen2.5_7b"       # for filenames
+# OLLAMA_MODEL = "qwen2.5:7b"  # for API
+# MODEL_ID = "qwen2.5_7b"   
 
 OLLAMA_MODEL = "deepseek-coder:6.7b"
-MODEL_ID = "deepseek_coder_6.7b"   # for filenames
+MODEL_ID = "deepseek_coder_6.7b"   
 
 TASK_FOLDER = "bcb9"       
 
