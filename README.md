@@ -47,7 +47,7 @@ Each task folder (`data/bcbXX/`) contains a `prompt.json` with the task descript
 
 ## Task Subset
 
-`selected_tasks.json` defines a curated subset of 117 tasks used for our experiments. This subset was chosen to keep evaluation tractable while covering a representative range of task types (data cleaning, statistical analysis, visualization, predictive modeling). All agents can be run against either this subset or the full set of tasks in `data/`.
+`selected_tasks.json` defines a curated subset of 119 tasks used for our experiments. This subset was chosen to keep evaluation tractable while covering a representative range of task types (data cleaning, statistical analysis, visualization, predictive modeling). All agents can be run against either this subset or the full set of tasks in `data/`.
 
 ## Agents
 
