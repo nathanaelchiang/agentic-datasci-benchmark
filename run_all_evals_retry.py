@@ -1,41 +1,43 @@
 import os
 import subprocess
 import json
+import argparse
 
-MODEL_ID = "qwen2.5_7b"          # matches qwen2.5_7b_retry_outputs.jsonl
-# MODEL_ID = "qwen2.5_3b"
-OUTPUT_SUFFIX = "retry_outputs"
+parser = argparse.ArgumentParser()
+parser.add_argument("--model", type=str, default="qwen2.5-coder:7b-instruct", help="Ollama model ID")
+parser.add_argument("--selected", action="store_true", help="Only run tasks in selected_tasks.json")
+args = parser.parse_args()
+
+RAW_MODEL_ID = args.model
+SAFE_MODEL_ID = RAW_MODEL_ID.replace(":", "_").replace("/", "_")
+VERSION_TAG = "retry_v3"
+OUTPUT_SUFFIX = f"{VERSION_TAG}_outputs"
 MAX_EVALS = 200
 
-# # Load curated task subset
-# with open("selected_tasks.json", "r") as f:
-#     selected_tasks = sorted(json.load(f))
-
-# Use all bcb folders in data/
-selected_tasks = sorted([
-    folder for folder in os.listdir("data")
-    if folder.startswith("bcb") and os.path.isdir(os.path.join("data", folder))
-])
-
+if args.selected:
+    with open("selected_tasks.json") as f:
+        selected_tasks = sorted(json.load(f))
+else:
+    selected_tasks = sorted([
+        folder for folder in os.listdir("data")
+        if folder.startswith("bcb") and os.path.isdir(os.path.join("data", folder))
+    ])
+    
 evaluated_count = 0
 
 for task in selected_tasks:
-
     task_path = os.path.join("data", task)
-    output_file = os.path.join(task_path, f"{MODEL_ID}_{OUTPUT_SUFFIX}.jsonl")
-    result_file = os.path.join(task_path, f"{MODEL_ID}_retry_tmc_results.jsonl")
+    output_file = os.path.join(task_path, f"{SAFE_MODEL_ID}_{OUTPUT_SUFFIX}.jsonl")
+    result_file = os.path.join(task_path, f"{SAFE_MODEL_ID}_{VERSION_TAG}_tmc_results.jsonl")
 
-    # Skip if no retry output exists
     if not os.path.exists(output_file):
         print(f"Skipping {task} (no retry output found)")
         continue
 
-    # Skip if already evaluated
     if os.path.exists(result_file):
-        print(f"Skipping {task} (already evaluated)")
+        print(f"Skipping {task} (TMC results already exist)")
         continue
 
-    # Stop after MAX_EVALS
     if evaluated_count >= MAX_EVALS:
         print(f"\nReached limit of {MAX_EVALS} evaluations. Stopping.")
         break
@@ -48,7 +50,7 @@ for task in selected_tasks:
         "python",
         "-m",
         "experiments.evaluate_tmc",
-        "--model_id", f"{MODEL_ID}_retry",
+        "--model_id", f"{SAFE_MODEL_ID}_{VERSION_TAG}",
         "--task_id", task
     ])
 

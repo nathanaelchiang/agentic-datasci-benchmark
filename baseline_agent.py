@@ -4,7 +4,13 @@ import os
 
 # Config
 OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL_ID = "mistral"      
+# MODEL_ID = "mistral"     
+# OLLAMA_MODEL = "qwen2.5:7b"   # for API
+# MODEL_ID = "qwen2.5_7b"       # for filenames
+
+OLLAMA_MODEL = "deepseek-coder:6.7b"
+MODEL_ID = "deepseek_coder_6.7b"   # for filenames
+
 TASK_FOLDER = "bcb9"       
 
 
@@ -13,13 +19,18 @@ def generate_code(prompt):
     response = requests.post(
         OLLAMA_URL,
         json={
-            "model": MODEL_ID,
+            "model": OLLAMA_MODEL,
             "prompt": prompt,
             "stream": False
         }
     )
 
-    text = response.json()["response"].strip()
+    data = response.json()
+
+    if "response" not in data:
+        raise Exception(f"Ollama error: {data}")
+
+    text = data["response"].strip()
 
     # Remove markdown blocks if present
     if "```" in text:
@@ -35,8 +46,8 @@ def generate_code(prompt):
     cleaned = "\n".join(lines).strip()
 
     # Ensure we start at first import
-    if "import pandas" in cleaned:
-        cleaned = cleaned[cleaned.index("import pandas"):]
+    if "import" in cleaned:
+        cleaned = cleaned[cleaned.index("import"):]
 
     return cleaned
 
@@ -81,17 +92,42 @@ def save_output(task_folder, model_id, code):
 
 # Main
 if __name__ == "__main__":
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str, default=OLLAMA_MODEL, help="Ollama model ID (e.g. qwen2.5:7b)")
+    parser.add_argument("--selected", action="store_true", help="Only run tasks in selected_tasks.json")
+    parser.add_argument("--all", action="store_true", help="Run all bcb tasks (default when no selected_tasks.json)")
+    parser.add_argument("tasks", nargs="*", help="Specific task folders to run")
+    args = parser.parse_args()
 
-    # Automatically detect all bcb task folders
-    all_tasks = [
-        folder for folder in os.listdir("data")
-        if folder.startswith("bcb") and os.path.isdir(os.path.join("data", folder))
-    ]
+    OLLAMA_MODEL = args.model
+    MODEL_ID = args.model.replace(":", "_").replace("/", "_")
+
+    if args.tasks:
+        all_tasks = args.tasks
+    elif args.all:
+        all_tasks = sorted([
+            folder for folder in os.listdir("data")
+            if folder.startswith("bcb") and os.path.isdir(os.path.join("data", folder))
+        ])
+    else:
+        with open("selected_tasks.json") as f:
+            all_tasks = sorted(json.load(f))
 
     print(f"Found {len(all_tasks)} tasks")
 
     for task_folder in sorted(all_tasks):
 
+        output_path = os.path.join(
+            "data",
+            task_folder,
+            f"{MODEL_ID}_outputs.jsonl"
+        )
+
+        if os.path.exists(output_path):
+            print(f"Skipping {task_folder} (already exists)")
+            continue
+    
         print(f"\n==============================")
         print(f"Running task: {task_folder}")
         print(f"==============================")

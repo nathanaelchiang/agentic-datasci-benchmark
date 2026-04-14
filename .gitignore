@@ -64,3 +64,4 @@ Thumbs.db
 # Ollama (optional)
 # =========================
 ollama.log
+data/

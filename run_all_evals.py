@@ -7,7 +7,8 @@ import sys
 
 MODEL_ID = sys.argv[1]
 # MODEL_ID = "qwen2.5-7b"
-MAX_EVALS = 100
+# MODEL_ID = "deepseek-coder:6.7b"
+MAX_EVALS = 200
 
 STRATEGY = "baseline"
 TIMESTAMP = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -15,8 +16,14 @@ RUN_ID = f"{STRATEGY}_{MODEL_ID}_{TIMESTAMP}"
 # MODEL_ID = "mistral"
 
 # Load curated task subset
-with open("selected_tasks.json", "r") as f:
-    selected_tasks = sorted(json.load(f))
+# with open("selected_tasks.json", "r") as f:
+#     selected_tasks = sorted(json.load(f))
+
+# Use all bcb folders in data/
+selected_tasks = sorted([
+    folder for folder in os.listdir("data")
+    if folder.startswith("bcb") and os.path.isdir(os.path.join("data", folder))
+])
 
 evaluated_count = 0
 

@@ -5,41 +5,26 @@ import shutil
 
 
 def parse_arguments():
+    """Parse command-line arguments for evaluation result display."""
     parser = argparse.ArgumentParser(description="For Evaluation Result Display")
     parser.add_argument("--task_id", type=str, default="bcb", choices=["bcb"],
                         help="Specify the task id, all bcb tasks by default")
     parser.add_argument("--model_id", type=str, default="gpt-4-turbo", help="Specify the model id")
+    parser.add_argument("--tasks", nargs="+", default=None,
+                    help="Specify exact task folders (e.g., bcb9 bcb20 ...)")
 
     args = parser.parse_args()
     return args
 
 
 def main(all_args):
+    """Load TMC results for all matching task folders and print pass@1 and average CR."""
     output_dir = 'data'
     model_id = all_args.model_id
     task_id = all_args.task_id
     all_crs = []
     all_success_rates = []
 
-    # check results on all tasks
-    # for dir_ in os.listdir(output_dir):
-    #     if os.path.isdir(os.path.join(output_dir, dir_)) and task_id in dir_:
-    #         # print(f"Evaluating Prompt ID: --{dir_}--\n")
-    #         output_file_path = os.path.join(output_dir, dir_, f"{model_id}_tmc_results.jsonl")
-    #         output_datas = read_json(output_file_path)
-    #         completed_n = len(output_datas)
-    #         crs = []
-    #         for i in range(10):
-    #             if i >= completed_n:
-    #                 crs.append(0)
-    #             else:
-    #                 crs.append(output_datas[i]["cr"])
-    #         success = [cr >= 1.0 for cr in crs]
-    #         avg_cr = sum(crs) / len(crs)
-    #         success_rate = sum(success) / len(success)
-    #         all_crs.append(avg_cr)
-    #         all_success_rates.append(success_rate)
-    
     import re
 
     for entry in os.scandir(output_dir):
@@ -67,10 +52,10 @@ def main(all_args):
         #         crs.append(0)
         #     else:
         #         crs.append(output_datas[i].get("cr", 0))
-        
+
         crs = [entry.get("cr", 0) for entry in output_datas]
 
-        # ✅ correct pass@1
+        # correct pass@1
         pass_1 = any(cr >= 1.0 for cr in crs)
 
         avg_cr = sum(crs) / len(crs)
@@ -85,7 +70,7 @@ def main(all_args):
     output_file_name = f"results/{task_id}/{model_id}_results.json"
     output_js = [{"pass_1_rate": pass_1_rate, "avg_cr": total_avg_cr}]
     dump_json(output_file_name, output_js)
-    
+
     #new
     from fractions import Fraction
 
@@ -94,17 +79,17 @@ def main(all_args):
         print("No valid task folders found.")
         return
 
-    # --- Pass@1 ---
+    # Pass@1
     pass_num = sum(all_success_rates)
     pass_den = len(all_success_rates)
     pass_frac = Fraction(pass_num, pass_den)
     pass_float = pass_num / pass_den
 
-    # --- Average CR ---
+    # Average CR
     avg_cr_float = sum(all_crs) / len(all_crs)
     avg_cr_frac = Fraction(avg_cr_float).limit_denominator(1000)
 
-    # --- Print ---
+    # Print
     print(f"--Results for {model_id} on {task_id}--\n")
     print(f"Pass@1 Rate: {pass_frac} ({pass_float:.4f})")
     print(f"Average CR: {avg_cr_frac} ({avg_cr_float:.4f})\n")
