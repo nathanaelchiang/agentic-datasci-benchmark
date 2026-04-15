@@ -19,7 +19,7 @@ ollama pull qwen2.5-coder:7b-instruct
 ollama serve
 ```
 
-Other models used in this project include `mistral`, `qwen2.5-coder:3b`, and `deepseek-coder:6.7b`. Pull any model you want to test:
+Other models used in this project include `mistral` and `deepseek-coder:6.7b`. Pull any model you want to test:
 
 ```bash
 ollama pull <model_name>
@@ -92,12 +92,13 @@ python reflection_agent.py
 A multi-phase pipeline: the Planner decomposes the task into structured JSON steps, the Executor writes code for each step, and the Reflector provides targeted debugging feedback on failures. Includes both inner retries (executor fixes) and outer retries (re-planning).
 
 ```bash
-python plan_exec_agent.py
+python plan_exec_agent.py          # Reflection Loop (default)
+python plan_exex_agent.py eval     # Single-Pass (argv flag, can be anything)
 ```
 
-- **Model config:** Edit `MODEL_PLANNER`, `MODEL_EXECUTOR`, `MODEL_REFLECTOR` in the script (default: `qwen2.5-coder:3b`)
+- **Model config:** Edit `MODEL_PLANNER`, `MODEL_EXECUTOR`, `MODEL_REFLECTOR` in the script (default: `qwen2.5-coder:7b`)
 - **Ollama endpoint:** `/api/chat`
-- **Output:** `data/<task_id>/PEL-<model_id>_outputs.jsonl`
+- **Output:** `data/<task_id>/PE(L)-<model_id>_outputs.jsonl`
 
 > **Note on Ollama endpoints:** Different agents use different Ollama API formats. Make sure `ollama serve` is running on port 11434 before launching any agent.
 
@@ -159,7 +160,7 @@ A successful evaluation produces a JSONL file with metrics like:
 
 ```
 baseline_agent.py       # Single-pass baseline agent
-retry_agent.py    # Iterative retry agent with error classification
+retry_agent.py          # Iterative retry agent with error classification
 reflection_agent.py     # LangGraph reflection agent
 plan_exec_agent.py      # Planner + Executor + Reflector pipeline
 run_all_evals.py        # Batch evaluation runner
